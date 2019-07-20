@@ -39,9 +39,9 @@ public class App {
 
     private static String schema
             = "{ \"type\": \"record\", \"name\": \"asd\", \"doc\": \"something\", \"fields\":"
-            + " [{\"name\": \"value\", \"type\": \"float\"}]}";
+            + " [{\"name\": \"value\", \"type\": \"double\"}]}";
 
-    public static boolean verify(ArrayList<Float> expected, ArrayList<Float> received) {
+    public static boolean verify(ArrayList<Double> expected, ArrayList<Double> received) {
         if (expected.size() != received.size()) {
             System.out.println("Sizes do not match.");
             return false;
@@ -54,17 +54,17 @@ public class App {
         return true;
     }
 
-    public static ArrayList<Float> readAll(ParquetReader<GenericData.Record> reader) throws IOException {
-        ArrayList<Float> data = new ArrayList<Float>();
+    public static ArrayList<Double> readAll(ParquetReader<GenericData.Record> reader) throws IOException {
+        ArrayList<Double> data = new ArrayList<Double>();
         GenericData.Record record;
         int cnt = 0;
         while ((record = reader.read()) != null) {
-            data.add((Float) record.get("value"));
+            data.add((Double) record.get("value"));
         }
         return data;
     }
 
-    public static void tryCase(ArrayList<Float> allData, Schema schema, String baseName, boolean useDict, boolean useByteStream, CompressionCodecName codec) throws IOException {
+    public static void tryCase(ArrayList<Double> allData, Schema schema, String baseName, boolean useDict, boolean useByteStream, CompressionCodecName codec) throws IOException {
         String extra = "";
         if (codec == CompressionCodecName.UNCOMPRESSED) {
             extra += "_no_codec";
@@ -76,12 +76,13 @@ public class App {
             extra += "_bs";
         }
         
-        String fName = baseName + "_f32" + extra + ".parquet";
+        String fName = baseName + "_f64" + extra + ".parquet";
         if (Files.exists(new File(fName).toPath())) {
             return;
         }
         //Files.deleteIfExists(new File(fName).toPath());
-        org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(baseName + "_f32" + extra + ".parquet");
+        String fullName = baseName + "_f64" + extra + ".parquet";
+        org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(fullName);
         ParquetWriter<GenericData.Record> writer = null;
         writer = AvroParquetWriter.
                 <GenericData.Record>builder(path)
@@ -94,13 +95,15 @@ public class App {
                 .withFPByteStreamSplitEncoding(useByteStream)
                 .withDictionaryEncoding(useDict)
                 .build();
-        for (Float v : allData) {
+        long startTime = System.currentTimeMillis();
+        for (Double v : allData) {
             GenericData.Record record = new GenericData.Record(schema);
-            record.put("value", v.floatValue());
+            record.put("value", v.doubleValue());
             writer.write(record);
         }
-
         writer.close();
+        long stopTime = System.currentTimeMillis();
+        System.out.println(fullName + ": " + (stopTime-startTime));
 
         // Now check that we can read the data.
         ParquetReader<GenericData.Record> reader = null;
@@ -108,7 +111,7 @@ public class App {
                 .<GenericData.Record>builder(path)
                 .withConf(new Configuration())
                 .build();
-        ArrayList<Float> receivedData = readAll(reader);
+        ArrayList<Double> receivedData = readAll(reader);
         if (!verify(allData, receivedData)) {
             System.out.println("Decompression failure.");
         }
@@ -116,30 +119,43 @@ public class App {
 
     public static void main(String[] args) throws IOException {
 
+        /*String[] dataFiles = {
+            "../dataset/32bit/obs_info.sp",
+            "../dataset/32bit/msg_bt.sp",
+            "../dataset/32bit/msg_lu.sp",
+            "../dataset/32bit/msg_sp.sp",
+            "../dataset/32bit/msg_sweep3d.sp",
+            "../dataset/32bit/num_brain.sp",
+            "../dataset/32bit/num_comet.sp",
+            "../dataset/32bit/num_control.sp",
+            "../dataset/32bit/num_plasma.sp",
+            "../dataset/32bit/obs_error.sp",
+            "../dataset/32bit/obs_info.sp",
+            "../dataset/32bit/obs_spitzer.sp",
+            "../dataset/32bit/obs_temp.sp",
+        };*/
         String[] dataFiles = {
-            "../../dataset/32bit/obs_info.sp",
-            "../../dataset/32bit/msg_bt.sp",
-            "../../dataset/32bit/msg_lu.sp",
-            "../../dataset/32bit/msg_sp.sp",
-            "../../dataset/32bit/msg_sweep3d.sp",
-            "../../dataset/32bit/num_brain.sp",
-            "../../dataset/32bit/num_comet.sp",
-            "../../dataset/32bit/num_control.sp",
-            "../../dataset/32bit/num_plasma.sp",
-            "../../dataset/32bit/obs_error.sp",
-            "../../dataset/32bit/obs_info.sp",
-            "../../dataset/32bit/obs_spitzer.sp",
-            "../../dataset/32bit/obs_temp.sp",
+            "../dataset/64bit/msg_bt.dp",
+            "../dataset/64bit/msg_sppm.dp",
+            "../dataset/64bit/msg_sweep3d.dp",
+            "../dataset/64bit/num_brain.dp",
+            "../dataset/64bit/num_comet.dp",
+            "../dataset/64bit/num_control.dp",
+            "../dataset/64bit/num_plasma.dp",
+            "../dataset/64bit/obs_error.dp",
+            "../dataset/64bit/obs_info.dp",
+            "../dataset/64bit/obs_spitzer.dp",
+            "../dataset/64bit/obs_temp.dp",
         };
 
         for (String dataName : dataFiles) {
             // Read whole file
-            ArrayList<Float> allData = new ArrayList<Float>();
-            String baseName = dataName.split("/")[4];
+            ArrayList<Double> allData = new ArrayList<Double>();
+            String baseName = dataName.split("/")[3];
             DataInputStream in = new DataInputStream(new FileInputStream(dataName));
             try {
                 while (true) {
-                    float v = in.readFloat();
+                    Double v = in.readDouble();
                     allData.add(v);
                 }
             } catch (Exception ex) {
