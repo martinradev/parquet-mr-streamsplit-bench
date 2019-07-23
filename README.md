@@ -1,4 +1,4 @@
-This is a temporary test project to gather stats for the new BYTE_STREAM_SPLIT encoding being reviewed for Apache Parquet.
+This is a temporary test project to gather stats for the new ```BYTE_STREAM_SPLIT``` encoding being reviewed for Apache Parquet.
 
 I used my local changes to parquet-mr to gather numbers on the reduction in size when the new encoding is used for FP column data.
 
@@ -23,6 +23,7 @@ I examined four different options for encoding and/or compressing the data:
 * no dictionary, compression using gzip
 * with dictionary, compression using gzip
 * the new byte stream split encoding, compression using gzip
+
 For the test I used gzip instead of zstd or brotli because the usage of zstd and brotli adds more dependencies I did not have installed.
 In my original report I used zstd and similar improvements were observed as with gzip.
 
