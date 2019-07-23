@@ -1,5 +1,34 @@
 This is a temporary test project to gather stats for the new BYTE_STREAM_SPLIT encoding being reviewed for Apache Parquet.
 
+I used my local changes to parquet-mr to gather numbers on the reduction in size when the new encoding is used for FP column data.
+
+The comparison covers both 32-bit and 64-bit floating point scientific data. The datasets can be downloaded in compressed form from the two following links:
+* https://userweb.cs.txstate.edu/~burtscher/research/datasets/FPsingle/
+* https://userweb.cs.txstate.edu/~burtscher/research/datasets/FPdouble/
+If you happen to attempt to reproduce the results, please read the instructions on decompressing the data before using it.
+
+The comparison is based on Apache Avro which stores the data using Apache Parquet. It is based on my extension of the parquet-mr project.
+The Avro schema used for comparison is the following:
+```
+{
+    "type": "record",
+    "name": "Test",
+    "fields": [{"name": "value", "type": "double"}]
+}
+```
+For F32 data "double" was replaced with "float".
+
+I examined four different options for encoding and/or compressing the data:
+* no dictionary, no compression
+* no dictionary, compression using gzip
+* with dictionary, compression using gzip
+* the new byte stream split encoding, compression using gzip
+For the test I used gzip instead of zstd or brotli because the usage of zstd and brotli adds more dependencies I did not have installed.
+In my original report I used zstd and similar improvements were observed as with gzip.
+
+Using dictionary encoding did not improve performance for anything but one of the entries. For that reason it is not included in the evaluation.
+The time to compress and store data to disk is dominated by the time necessary to store to disk. For many cases, the new encoding led to slightly better performance likely due to less data needed to be stored to disk.
+
 Results:
 
 | F32 dataset name | no compression (MB) | gzip (MB) | byte_stream_split + gzip (MB) | % Improvement with new encoding |
@@ -30,3 +59,6 @@ Results:
 | obs_info         | 18.93               | 16.58     | 14.49                         | +11.04                          |
 | obs_spitzer      | 198.22              | 162.60    | 157.33                        | +2.65                           |
 | obs_temp         | 39.94               | 38.57     | 35.58                         | +7.48                           |
+
+Setup:
+
